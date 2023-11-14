@@ -1,0 +1,290 @@
+From 3ff69745796f0d0f41573288315aa6bd1661e603 Mon Sep 17 00:00:00 2001
+From: Jubril <Jbello@uoguelph.ca>
+Date: Mon, 13 Nov 2023 19:30:28 -0500
+Subject: [PATCH 1/2] fix: :bug: minor bug fix
+
+---
+ src/App.tsx | 24 +++++++++++++++++-------
+ 1 file changed, 17 insertions(+), 7 deletions(-)
+
+diff --git a/src/App.tsx b/src/App.tsx
+index 0728518..d9e67c1 100755
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -8,6 +8,7 @@ import './App.css';
+  */
+ interface IState {
+   data: ServerRespond[],
++  showGraph: boolean,
+ }
+ 
+ /**
+@@ -22,6 +23,7 @@ class App extends Component<{}, IState> {
+       // data saves the server responds.
+       // We use this state to parse data down to the child element (Graph) as element property
+       data: [],
++      showGraph: false,
+     };
+   }
+ 
+@@ -29,18 +31,26 @@ class App extends Component<{}, IState> {
+    * Render Graph react component with state.data parse as property data
+    */
+   renderGraph() {
+-    return (<Graph data={this.state.data}/>)
++    if (this.state.showGraph) { return (<Graph data={this.state.data} />) }
+   }
+ 
+   /**
+    * Get new data from server and update the state with the new data
+    */
+   getDataFromServer() {
+-    DataStreamer.getData((serverResponds: ServerRespond[]) => {
+-      // Update the state by creating a new array of data that consists of
+-      // Previous data in the state and the new data from server
+-      this.setState({ data: [...this.state.data, ...serverResponds] });
+-    });
++    let x = 0;
++    const interval = setInterval(() => {
++      DataStreamer.getData((serverResponds: ServerRespond[]) => {
++        // Update the state by creating a new array of data that consists of
++        // Previous data in the state and the new data from server
++        this.setState({ data: [...this.state.data, ...serverResponds] });
++      });
++      x++;
++      if (x > 100) {
++        clearInterval(interval);
++      }
++    }, 100);
++
+   }
+ 
+   /**
+@@ -59,7 +69,7 @@ class App extends Component<{}, IState> {
+             // As part of your task, update the getDataFromServer() function
+             // to keep requesting the data every 100ms until the app is closed
+             // or the server does not return anymore data.
+-            onClick={() => {this.getDataFromServer()}}>
++            onClick={() => { this.getDataFromServer() }}>
+             Start Streaming Data
+           </button>
+           <div className="Graph">
+-- 
+2.42.0.windows.2
+
+
+From 3b531f952ae7041f9d92a33cc15e9ce74cc4e2e9 Mon Sep 17 00:00:00 2001
+From: Jubril <Jbello@uoguelph.ca>
+Date: Mon, 13 Nov 2023 20:25:57 -0500
+Subject: [PATCH 2/2] fix: :bug: model fix for graph display
+
+---
+ src/App.tsx   | 133 ++++++++++++++++++++++++++------------------------
+ src/Graph.tsx |  13 +++--
+ 2 files changed, 79 insertions(+), 67 deletions(-)
+
+diff --git a/src/App.tsx b/src/App.tsx
+index d9e67c1..439fe6e 100755
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,14 +1,15 @@
+-import React, { Component } from 'react';
+-import DataStreamer, { ServerRespond } from './DataStreamer';
++import React, {Component} from 'react';
++import DataStreamer, {ServerRespond} from './DataStreamer';
+ import Graph from './Graph';
+ import './App.css';
++import {setInterval} from "timers";
+ 
+ /**
+  * State declaration for <App />
+  */
+ interface IState {
+-  data: ServerRespond[],
+-  showGraph: boolean,
++    data: ServerRespond[],
++    showGraph: boolean
+ }
+ 
+ /**
+@@ -16,69 +17,73 @@ interface IState {
+  * It renders title, button and Graph react element.
+  */
+ class App extends Component<{}, IState> {
+-  constructor(props: {}) {
+-    super(props);
++    constructor(props: {}) {
++        super(props);
+ 
+-    this.state = {
+-      // data saves the server responds.
+-      // We use this state to parse data down to the child element (Graph) as element property
+-      data: [],
+-      showGraph: false,
+-    };
+-  }
++        this.state = {
++            // data saves the server responds.
++            // We use this state to parse data down to the child element (Graph) as element property
++            data: [],
++            showGraph: false
++        };
++    }
+ 
+-  /**
+-   * Render Graph react component with state.data parse as property data
+-   */
+-  renderGraph() {
+-    if (this.state.showGraph) { return (<Graph data={this.state.data} />) }
+-  }
++    /**
++     * Render Graph react component with state.data parse as property data
++     */
++    renderGraph() {
++        if (this.state.showGraph) {
++            return (<Graph data={this.state.data}/>)
++        }
++    }
+ 
+-  /**
+-   * Get new data from server and update the state with the new data
+-   */
+-  getDataFromServer() {
+-    let x = 0;
+-    const interval = setInterval(() => {
+-      DataStreamer.getData((serverResponds: ServerRespond[]) => {
+-        // Update the state by creating a new array of data that consists of
+-        // Previous data in the state and the new data from server
+-        this.setState({ data: [...this.state.data, ...serverResponds] });
+-      });
+-      x++;
+-      if (x > 100) {
+-        clearInterval(interval);
+-      }
+-    }, 100);
++    /**
++     * Get new data from server and update the state with the new data
++     */
++    getDataFromServer() {
++        let x = 0;
++        const interval = setInterval(() => {
++            DataStreamer.getData((serverResponds: ServerRespond[]) => {
++                this.setState({
++                    data: serverResponds,
++                    showGraph: true
++                });
++            });
++            x++;
++            if (x > 1000) {
++                clearInterval(interval);
++            }
++        }, 100);
++    }
+ 
+-  }
+-
+-  /**
+-   * Render the App react component
+-   */
+-  render() {
+-    return (
+-      <div className="App">
+-        <header className="App-header">
+-          Bank & Merge Co Task 2
+-        </header>
+-        <div className="App-content">
+-          <button className="btn btn-primary Stream-button"
+-            // when button is click, our react app tries to request
+-            // new data from the server.
+-            // As part of your task, update the getDataFromServer() function
+-            // to keep requesting the data every 100ms until the app is closed
+-            // or the server does not return anymore data.
+-            onClick={() => { this.getDataFromServer() }}>
+-            Start Streaming Data
+-          </button>
+-          <div className="Graph">
+-            {this.renderGraph()}
+-          </div>
+-        </div>
+-      </div>
+-    )
+-  }
++    /**
++     * Render the App react component
++     */
++    render() {
++        return (
++            <div className="App">
++                <header className="App-header">
++                    Bank & Merge Co Task 2
++                </header>
++                <div className="App-content">
++                    <button className="btn btn-primary Stream-button"
++                        // when button is click, our react app tries to request
++                        // new data from the server.
++                        // As part of your task, update the getDataFromServer() function
++                        // to keep requesting the data every 100ms until the app is closed
++                        // or the server does not return anymore data.
++                            onClick={() => {
++                                this.getDataFromServer()
++                            }}>
++                        Start Streaming Data
++                    </button>
++                    <div className="Graph">
++                        {this.renderGraph()}
++                    </div>
++                </div>
++            </div>
++        )
++    }
+ }
+ 
+-export default App;
++export default App;
+\ No newline at end of file
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 3b2a7da..c1f7d22 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -14,7 +14,7 @@ interface IProps {
+  * Perspective library adds load to HTMLElement prototype.
+  * This interface acts as a wrapper for Typescript compiler.
+  */
+-interface PerspectiveViewerElement {
++interface PerspectiveViewerElement extends HTMLElement {
+   load: (table: Table) => void,
+ }
+ 
+@@ -32,7 +32,7 @@ class Graph extends Component<IProps, {}> {
+ 
+   componentDidMount() {
+     // Get element to attach the table from the DOM.
+-    const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    const elem = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
+ 
+     const schema = {
+       stock: 'string',
+@@ -49,6 +49,13 @@ class Graph extends Component<IProps, {}> {
+ 
+       // Add more Perspective configurations here.
+       elem.load(this.table);
++      elem.setAttribute("view", "y_line");
++      elem.setAttribute("column-pivots", '["stock"]');
++      elem.setAttribute("row_pivots", '["timestamp"]');
++      elem.setAttribute("columns", '["top_ask_price"]');
++      elem.setAttribute("aggregates",
++        '{"stock":"distinct_count", "top_ask_price":"avg", "top_bid_price":"avg", "timestamp":"distinct_count"}'
++      );
+     }
+   }
+ 
+@@ -70,4 +77,4 @@ class Graph extends Component<IProps, {}> {
+   }
+ }
+ 
+-export default Graph;
++export default Graph;
+\ No newline at end of file
+-- 
+2.42.0.windows.2
+
